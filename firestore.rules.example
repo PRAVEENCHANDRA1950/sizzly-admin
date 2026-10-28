@@ -1,0 +1,36 @@
+// Suggested Firestore rules for Sizzly. NOT deployed automatically.
+// Review them, then test against BOTH apps (e.g. in the Firebase emulator) before deploying:
+// guests use the Flutter customer app without signing in, so their flows must keep working.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Admin panel users sign in with Firebase Auth; guests never do.
+    function isAdmin() {
+      return request.auth != null;
+    }
+
+    // Menu: everyone reads, only admins change it.
+    match /menus/{menuId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Tables: guests occupy/free existing tables (status, active_order_id);
+    // only admins create or delete them.
+    match /tables/{tableId} {
+      allow read, update: if true;
+      allow create, delete: if isAdmin();
+    }
+
+    // Orders: guests create sessions and append items; only admins delete.
+    match /orders/{orderId} {
+      allow read, create, update: if true;
+      allow delete: if isAdmin();
+    }
+
+    // Shared table carts are fully managed by guests.
+    match /carts/{orderId} {
+      allow read, write: if true;
+    }
+  }
+}
